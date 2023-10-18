@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import ChatInput from "./ChatInput";
-import Logout from "./Logout";
+import DropdownMenu from "./DropdownMenu";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import { sendMessageRoute, recieveMessageRoute } from "../utils/APIRoutes";
@@ -126,7 +126,7 @@ export default function ChatContainer({ currentChat, socket }) {
           </div>
           <div className="sentiment-score">Sentiment score: {sentimentScore}</div>
           <div className="general-sentiment">General sentiment: {generalSentiment}</div>
-          <Logout />
+          <DropdownMenu />
         </div>
       </div>
       <div className="chat-messages">
@@ -180,6 +180,7 @@ const Container = styled.div`
       .username {
         h3 {
           color: white;
+          margin-bottom: 0px;
         }
       }
     }
