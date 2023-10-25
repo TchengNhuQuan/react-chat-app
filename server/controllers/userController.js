@@ -6,10 +6,13 @@ module.exports.login = async (req, res, next) => {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (!user)
-      return res.json({ msg: "Incorrect Username or Password", status: false });
+      return res.json({ msg: "Incorrect Username or Password!", status: false });
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid)
-      return res.json({ msg: "Incorrect Username or Password", status: false });
+      return res.json({ msg: "Incorrect Username or Password!", status: false });
+    if (user.isBanned) {
+      return res.json({ msg: "This account has been banned!", status: false});
+    }
     delete user.password;
     return res.json({ status: true, user });
   } catch (ex) {
@@ -73,6 +76,21 @@ module.exports.setAvatar = async (req, res, next) => {
     next(ex);
   }
 };
+
+module.exports.updateUserById = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const userData = await User.findByIdAndUpdate(
+      userId, {
+        isBanned: true
+      },
+      { new: true }
+    )
+    return res.json({ status: true, userData });
+  } catch (ex) {
+    next(ex);
+  }
+}
 
 module.exports.logOut = (req, res, next) => {
   try {

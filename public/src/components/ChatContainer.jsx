@@ -2,19 +2,22 @@ import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import ChatInput from "./ChatInput";
 import DropdownMenu from "./DropdownMenu";
+import { useNavigate, Link } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
-import { sendMessageRoute, recieveMessageRoute } from "../utils/APIRoutes";
+import { sendMessageRoute, recieveMessageRoute, updateUserRoute } from "../utils/APIRoutes";
 import FilterHacked from "../utils/bad-words-hacked.js";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Sentiment from "sentiment";
 
 export default function ChatContainer({ currentChat, socket }) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [arrivalMessage, setArrivalMessage] = useState(null);
   const [sentimentScore, setSentimentScore] = useState(null);
   const [generalSentiment, setGeneralSentiment] = useState(null);
+  const [warning, setWarning] = useState(0);
   const scrollRef = useRef();
   const filter = new FilterHacked();
   const sentiment = new Sentiment();
@@ -26,6 +29,15 @@ export default function ChatContainer({ currentChat, socket }) {
     draggable: true,
     theme: "light",
   };
+  const errorToastOptions = {
+    position: "top-center",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    theme: "colored",
+  }
 
   useEffect(() => {
     async function setMessagesForUser() {
@@ -72,6 +84,7 @@ export default function ChatContainer({ currentChat, socket }) {
 
     // check for bad words
     if (filter.cleanHacked(msg).includes("*")) {
+      setWarning(warning + 1);
       toast.warn("Please don't say bad words!", toastOptions);
     }
 
@@ -108,6 +121,25 @@ export default function ChatContainer({ currentChat, socket }) {
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const updateUser = async () => {
+      const user = await JSON.parse(
+        localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
+      );
+      const data = await axios.post(`${updateUserRoute}/${user._id}`);
+      if (data.status) {
+        toast.error("Your account has been banned after 3 times warning!", errorToastOptions);   
+        setTimeout(() => {
+          localStorage.clear();
+          navigate("/login");
+        }, 3000);
+      }
+    }
+    if (warning >= 3) {
+      updateUser();
+    }
+  }, [warning])
 
   return (
     <Container>
