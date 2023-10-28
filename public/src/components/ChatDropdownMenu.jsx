@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Dropdown from "react-bootstrap/Dropdown";
 import DropdownButton from "react-bootstrap/DropdownButton";
-import FilterHacked from "../utils/bad-words-hacked.js";
+import { addBadWordsRoute } from "../utils/APIRoutes";
 import { useNavigate } from "react-router-dom";
 import { confirm } from "react-bootstrap-confirmation";
 import axios from "axios";
@@ -12,13 +12,11 @@ import Modal from "react-bootstrap/Modal";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 
-export default function DropdownMenu() {
-  const filter = new FilterHacked();
+export default function ChatDropdownMenu({ handleAddBadWords }) {
   const navigate = useNavigate();
   const [show, setShow] = useState(false);
   const [validated, setValidated] = useState(false);
   const [badWordValues, setBadWordValues] = useState(null);
-  const [badWords, setBadWords] = useState("");
 
   const handleClick = async () => {
     const result = await confirm("Are you sure you want to Log out?");
@@ -39,25 +37,22 @@ export default function DropdownMenu() {
 
   const handleChange = (event) => {
     setBadWordValues(event.target.value);
-  } 
+  };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     const form = event.currentTarget;
     if (form.checkValidity() === false) {
       event.preventDefault();
       event.stopPropagation();
-    } 
+    }
 
-    let newBadWords = badWordValues.split(", ");
-    setBadWords(newBadWords);
+    event.preventDefault();
+    event.stopPropagation();
 
+    handleAddBadWords(badWordValues);
     setValidated(true);
-    setShow(false)
+    setShow(false);
   };
-
-  useEffect(() => {
-    filter.addWords(...badWords);
-  }, [badWords])
 
   return (
     <>
@@ -75,7 +70,13 @@ export default function DropdownMenu() {
           <Modal.Body>
             <Form.Group as={Col} md="12">
               <Form.Label>Please add new bad words below</Form.Label>
-              <Form.Control type="text" placeholder="xxx, xxx, xxx" required name="badwords" onChange={(e) => handleChange(e)}/>
+              <Form.Control
+                type="text"
+                placeholder="xxx, xxx, xxx"
+                required
+                name="badwords"
+                onChange={(e) => handleChange(e)}
+              />
               <Form.Control.Feedback type="invalid">
                 Please provide bad word in valid format.
               </Form.Control.Feedback>
@@ -85,9 +86,6 @@ export default function DropdownMenu() {
             <Button variant="secondary" onClick={handleClose}>
               Close
             </Button>
-            {/* <Button variant="primary" onClick={handleClose}>
-              Save Changes
-            </Button> */}
             <Button type="submit">Submit form</Button>
           </Modal.Footer>
         </Form>
