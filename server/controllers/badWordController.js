@@ -17,7 +17,7 @@ module.exports.addBadWords = async (req, res, next) => {
     });
 
     if (data) return res.json({ msg: "Bad words added successfully." });
-    else return res.json({ msg: "Failed to add bad words to the database" });
+    else return res.json({ msg: "Failed to add bad words to the database", status: true });
   } catch (ex) {
     next(ex);
   }
