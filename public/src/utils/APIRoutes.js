@@ -6,3 +6,6 @@ export const allUsersRoute = `${host}/api/auth/allusers`;
 export const sendMessageRoute = `${host}/api/messages/addmsg`;
 export const recieveMessageRoute = `${host}/api/messages/getmsg`;
 export const setAvatarRoute = `${host}/api/auth/setavatar`;
+export const updateUserRoute = `${host}/api/auth/update-user`;
+export const getBadWordsRoute = `${host}/api/badwords/getbadwords`;
+export const addBadWordsRoute = `${host}/api/badwords/addbadwords`;

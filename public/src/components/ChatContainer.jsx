@@ -1,20 +1,30 @@
 import React, { useState, useEffect, useRef } from "react";
 import styled from "styled-components";
 import ChatInput from "./ChatInput";
-import Logout from "./Logout";
+import ChatDropdownMenu from "./ChatDropdownMenu";
+import { useNavigate, Link } from "react-router-dom";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
-import { sendMessageRoute, recieveMessageRoute } from "../utils/APIRoutes";
+import {
+  sendMessageRoute,
+  recieveMessageRoute,
+  updateUserRoute,
+  getBadWordsRoute,
+  addBadWordsRoute,
+} from "../utils/APIRoutes";
 import FilterHacked from "../utils/bad-words-hacked.js";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Sentiment from "sentiment";
 
 export default function ChatContainer({ currentChat, socket }) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
+  const [badWords, setBadWords] = useState([]);
   const [arrivalMessage, setArrivalMessage] = useState(null);
   const [sentimentScore, setSentimentScore] = useState(null);
   const [generalSentiment, setGeneralSentiment] = useState(null);
+  const [warning, setWarning] = useState(0);
   const scrollRef = useRef();
   const filter = new FilterHacked();
   const sentiment = new Sentiment();
@@ -25,6 +35,15 @@ export default function ChatContainer({ currentChat, socket }) {
     pauseOnHover: true,
     draggable: true,
     theme: "light",
+  };
+  const errorToastOptions = {
+    position: "top-center",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    theme: "colored",
   };
 
   useEffect(() => {
@@ -44,16 +63,33 @@ export default function ChatContainer({ currentChat, socket }) {
     setGeneralSentiment(null);
   }, [currentChat]);
 
-  // useEffect(() => {
-  //   const getCurrentChat = async () => {
-  //     if (currentChat) {
-  //       await JSON.parse(
-  //         localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
-  //       )._id;
-  //     }
-  //   };
-  //   getCurrentChat();
-  // }, [currentChat]);
+  useEffect(() => {
+    async function setBadwordsRules() {
+      const response = await axios.post(getBadWordsRoute);
+      let wordArr = [];
+      response.data.forEach((element) => {
+        wordArr.push(element.word);
+      });
+      setBadWords(wordArr);
+    }
+
+    setBadwordsRules();
+  }, [messages]);
+
+  useEffect(() => {
+    filter.addWords(...badWords);
+  }, [badWords])
+
+  useEffect(() => {
+    const getCurrentChat = async () => {
+      if (currentChat) {
+        await JSON.parse(
+          localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
+        )._id;
+      }
+    };
+    getCurrentChat();
+  }, [currentChat]);
 
   const handleSendMsg = async (msg) => {
     const data = await JSON.parse(
@@ -70,8 +106,10 @@ export default function ChatContainer({ currentChat, socket }) {
       message: msg,
     });
 
+    filter.addWords(...badWords);
     // check for bad words
     if (filter.cleanHacked(msg).includes("*")) {
+      setWarning(warning + 1);
       toast.warn("Please don't say bad words!", toastOptions);
     }
 
@@ -93,6 +131,21 @@ export default function ChatContainer({ currentChat, socket }) {
     setMessages(msgs);
   };
 
+  const handleAddBadWords = async (badwords) => {
+    let newBadWords = badwords.split(", ");
+
+    for (var i = 0; i < newBadWords.length; i++) {
+      try {
+        await axios.post(addBadWordsRoute, {
+          word: newBadWords[i],
+        });
+        setBadWords([...badWords, newBadWords[i]])
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }
+
   useEffect(() => {
     if (socket.current) {
       socket.current.on("msg-recieve", (msg) => {
@@ -109,6 +162,28 @@ export default function ChatContainer({ currentChat, socket }) {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    const updateUser = async () => {
+      const user = await JSON.parse(
+        localStorage.getItem(process.env.REACT_APP_LOCALHOST_KEY)
+      );
+      const data = await axios.post(`${updateUserRoute}/${user._id}`);
+      if (data.status) {
+        toast.error(
+          "Your account has been banned after 3 times warning!",
+          errorToastOptions
+        );
+        setTimeout(() => {
+          localStorage.clear();
+          navigate("/login");
+        }, 3000);
+      }
+    };
+    if (warning >= 3) {
+      updateUser();
+    }
+  }, [warning]);
+
   return (
     <Container>
       <div className="chat-header">
@@ -124,13 +199,19 @@ export default function ChatContainer({ currentChat, socket }) {
               <h3>{currentChat.username}</h3>
             </div>
           </div>
-          <div className="sentiment-score">Sentiment score: {sentimentScore}</div>
-          <div className="general-sentiment">General sentiment: {generalSentiment}</div>
-          <Logout />
+          <div className="sentiment-score">
+            Sentiment score: {sentimentScore}
+          </div>
+          <div className="general-sentiment">
+            General sentiment: {generalSentiment}
+          </div>
+          <ChatDropdownMenu handleAddBadWords={handleAddBadWords}/>
         </div>
       </div>
       <div className="chat-messages">
         {messages.map((message) => {
+          filter.addWords(...badWords);
+
           return (
             <div ref={scrollRef} key={uuidv4()}>
               <div
@@ -140,7 +221,6 @@ export default function ChatContainer({ currentChat, socket }) {
               >
                 <div className="content ">
                   <p>{filter.cleanHacked(message.message)}</p>
-                  {/* <p>{message.message}</p> */}
                 </div>
               </div>
             </div>
@@ -180,6 +260,7 @@ const Container = styled.div`
       .username {
         h3 {
           color: white;
+          margin-bottom: 0px;
         }
       }
     }
@@ -190,7 +271,8 @@ const Container = styled.div`
       width: 100%;
       margin-top: 12px;
     }
-    .sentiment-score, .general-sentiment {
+    .sentiment-score,
+    .general-sentiment {
       color: #fff;
     }
   }
