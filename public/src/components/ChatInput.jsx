@@ -7,6 +7,9 @@ import Picker from "emoji-picker-react";
 export default function ChatInput({ handleSendMsg }) {
   const [msg, setMsg] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [message, setMessage] = useState("");
+  const [file, setFile] = useState();
+
   const handleEmojiPickerhideShow = () => {
     setShowEmojiPicker(!showEmojiPicker);
   };
@@ -26,8 +29,10 @@ export default function ChatInput({ handleSendMsg }) {
   };
 
   const selectFile = (event) => {
-    
+    setMessage(event.target.files[0].name);
+    setFile(event.target.files[0]);
   }
+
   return (
     <Container>
       <div className="button-container d-flex align-items-center justify-content-center">
